@@ -4,7 +4,8 @@ module VowelPerception
     using Chain
     using CairoMakie
 
-    datadir(args...) = joinpath(@__DIR__, "..", "data", args...)
+    # function to go to data directory and load data
+    datadir(args...) = joinpath(@__DIR__, "..", "..","data", args...)
     data_mixed() = CSV.read(datadir("mixed_valid.csv"), DataFrame)
     data_blocked() = CSV.read(datadir("blocked_valid.csv"), DataFrame)
     data_precursors() = CSV.read(datadir("precursors_valid.csv"), DataFrame)
@@ -39,6 +40,7 @@ module VowelPerception
         )[speaker]
     end
 
+    # case sensitive
     function speaker_pretty(speaker)
         Dict(
             missing => "Center",
@@ -76,6 +78,7 @@ module VowelPerception
     medium_font() = raw"C:\Users\~\AppData\Local\Microsoft\Windows\Fonts\HelveticaNeueLTStd-Md.otf"
     bold_font() = raw"C:\Users\~\AppData\Local\Microsoft\Windows\Fonts\HelveticaNeueLTStd-Bd.otf"
 
+    # scale morphe and high / low F0/FF to be centered around 0
     scale_morph(m) = 4m - 2
     unscale_morph(s) = (s + 2) / 4
     scale_f0(f0) = f0 == 1 ? 0.0 : f0 > 1 ? 1.0 : -1.0
