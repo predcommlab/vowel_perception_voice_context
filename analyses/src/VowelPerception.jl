@@ -4,8 +4,6 @@ module VowelPerception
     using Chain
     using CairoMakie
 
-    cd("C:\\Users\\ufer\\Documents\\GitHub\\vowel-perception-behavioral-paper\\")
-
     datadir(args...) = joinpath(@__DIR__, "..", "data", args...)
     data_mixed() = CSV.read(datadir("mixed_valid.csv"), DataFrame)
     data_blocked() = CSV.read(datadir("blocked_valid.csv"), DataFrame)
@@ -53,16 +51,6 @@ module VowelPerception
     end
 
     # # blue / red dark / light
-    # function contextcolor(speaker)
-    #     Dict(
-    #         "center" => "gray30",
-    #         missing => "gray30",
-    #         "high_ff" => "#F5A2B2",
-    #         "high_f0" => "#95C0ED",
-    #         "low_f0" => "#3B7DC4",
-    #         "low_ff" => "#ed2f55",
-    #     )[speaker]
-    # end
     function contextcolor(speaker)
         Dict(
             "center" => "gray30",
@@ -82,9 +70,11 @@ module VowelPerception
         )[experiment]
     end
 
-    normal_font() = raw"C:\Users\Krumbiegel\AppData\Local\Microsoft\Windows\Fonts\HelveticaNeueLTStd-Lt.otf"
-    medium_font() = raw"C:\Users\Krumbiegel\AppData\Local\Microsoft\Windows\Fonts\HelveticaNeueLTStd-Md.otf"
-    bold_font() = raw"C:\Users\Krumbiegel\AppData\Local\Microsoft\Windows\Fonts\HelveticaNeueLTStd-Bd.otf"
+    # fonts may need to be downloaded 
+    # should work fine without specifying font even with provided code 
+    normal_font() = raw"C:\Users\~\AppData\Local\Microsoft\Windows\Fonts\HelveticaNeueLTStd-Lt.otf"
+    medium_font() = raw"C:\Users\~\AppData\Local\Microsoft\Windows\Fonts\HelveticaNeueLTStd-Md.otf"
+    bold_font() = raw"C:\Users\~\AppData\Local\Microsoft\Windows\Fonts\HelveticaNeueLTStd-Bd.otf"
 
     scale_morph(m) = 4m - 2
     unscale_morph(s) = (s + 2) / 4
