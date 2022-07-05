@@ -14,6 +14,7 @@ binsize = 52
 # enter 1 for precursor data
 function plot_binned_temporal_development(arg)
     binned = @chain begin
+        # load data
         if arg ==1
             VP.data_precursors()
         else
@@ -37,7 +38,6 @@ function plot_binned_temporal_development(arg)
         @subset :context_speaker == :speaker
 
         sort([:speaker, :trial_bin, :morph])
-        # sort([:context_speaker, :trial_bin, :morph])
     end
 
 
@@ -65,8 +65,6 @@ function plot_binned_temporal_development(arg)
         @subset :context_speaker != :speaker
         # filter 0.5 morph
         @subset :morph == 0.5
-
-        # sort([:speaker, :trial_bin, :morph])
         sort([:context_speaker, :trial_bin, :morph])
     end
 
@@ -83,19 +81,6 @@ function plot_binned_temporal_development(arg)
 
     axes = Axis[]
 
-    # iterate over gdf grouped data frame
-
-    # println(binned)
-    # binned_ = subset(binned, :context_speaker => ByRow(==(:speaker))) # --> does not work?
-    # println(binned_)
-
-    # binned_ = filter(row -> (row.context_speaker == row.speaker),  binned)
-    # println(binned_)
-
-
-    # for (i, gdf) in enumerate(groupby(
-    #     filter(row -> (row.context_speaker == row.speaker),  binned), 
-    #     :speaker, sort = true))
     line_style = [:dash, :dot, :solid, :dashdotdot, [0.5, 1.0, 1.5, 2.5]]
 
     # iterate ofer grouped dataframe with coontext speaker + gdf w center speaker
@@ -139,12 +124,6 @@ function plot_binned_temporal_development(arg)
     hideydecorations!.(axes[:, 2])
     hidexdecorations!.(axes[1, :])
 
-    # Legend(f[1:2, 3],
-    #     [LineElement(color = (:black, j/5), linestyle = line_style[j]) for j in 1:5],
-    #     ["u", "0.25", "0.5", "0.75", "o"],
-    #     "Morph",
-    #     framevisible = false,
-    # )
 
     glegend = f[1:2, 3] = GridLayout(
         tellheight = false,
