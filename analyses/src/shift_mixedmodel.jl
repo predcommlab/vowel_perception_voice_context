@@ -61,7 +61,7 @@ model_sequDiffCod = fit(
     contrasts = Dict(:experiment => SeqDiffCoding())
 )
 
-latexed_table(model) |> println
+latexed_table(model_sequDiffCod) |> println
 
 open(VP.reportpath("mixedmodel_shifts_sequDiffCod_all.txt"), "w") do file
     print(file, model_sequDiffCod)
@@ -73,7 +73,6 @@ end
 
 
 ## model of center speaker in blocked only
-
 df_center_blocked = @chain begin
     VP.data_all()
     @subset :speaker == "center" && :experiment == "blocked"
@@ -104,8 +103,8 @@ open(VP.reportpath("mixedmodel_shifts_center_blocked_latex.txt"), "w") do file
     print(file, latexed_table(model_center_blocked))
 end
 
-## model of center speaker after precursors only
 
+## model of center speaker after precursors only
 df_center_precursors = @chain begin
     VP.data_all()
     @subset :speaker == "center" && :experiment == "precursors"
@@ -155,7 +154,6 @@ model_center_blocked_precursors = fit(
     @formula(response_o ~ experiment*ffc + experiment*f0c + (1 | participant) + (1 | wordpair)),
     df_center_mixed_blocked_precursors,
     Bernoulli(),
-    #contrasts = Dict(:experiment => SeqDiffCoding())
 )
 
 model_center_blocked_precursors
