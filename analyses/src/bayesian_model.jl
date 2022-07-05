@@ -53,10 +53,7 @@ function compute_hillenbrand_slope_variance()
         iterations,
         n_chains)
 
-    # describe(chain, showall=true)
-    # summarize(chain)
     x = summarize(chain; sections=[:parameters, :internals])
-    # println(chain[:lp])
     open("reports/hillenbrand_model_summarize.txt", "w") do file
         show(file, MIME"text/plain"(), x)
     end
@@ -77,12 +74,10 @@ function predict_ff_from_f0(hz)
     slope = hb_slope
     VP.bark_to_hz(VP.hz_to_bark(hz) * slope + intercept)
 end
-# other way around? iterative?
 
 guessed_ff = predict_ff_from_f0(170)
 
 # function: combination of distributions for later (prior with context distribution)
-# math?
 function combine_distributions(n1::Normal, n2::Normal)
     t = 1 / n1.σ ^ 2
     u = 1 / n2.σ ^ 2
@@ -135,7 +130,6 @@ end
     # truncated because o² can only be positive
     σ²_ff ~ truncated(Normal(0, 100), 0, Inf)
     pred_err_scale_1a ~ Normal(0, 2)
-    # why two scales ? --> one for mixed one for blocked 
     pred_err_scale_1b ~ Normal(0, 2)
     log_morphscale ~ Normal(0, 3)
 
@@ -194,10 +188,6 @@ end
         p_o = cdf(combined, exp(log_morphscale) * morphs[i] + stimulus_ff)
 
 
-
-        # why stimulus_ff and not predicted stimulus_ff? -> cdf verschoben ist schon template prediction
-        
-
         n_os[i] ~ Binomial(ns[i], p_o)
     end
 end
@@ -210,8 +200,7 @@ end
 
     # truncated because o² can only be positive
     σ²_ff ~ truncated(Normal(0, 100), 0, Inf)
-    # pred_err_scale_1a ~ Normal(0, 2)
-    # pred_err_scale_1b ~ Normal(0, 2)
+
     log_morphscale ~ Normal(0, 3)
 
     for i in eachindex(f0s)
@@ -220,28 +209,17 @@ end
         # given the stimulus pitch
         ei = experiment_indices[i]
 
-       
-        # this is the learned error between what the f0 values of the previous trials predict and
-        # what the ff values of the previous trials were
-        # which is actually always zero for the mixed condition if we always use the center speaker
-        # as the context, because the prediction for the ff of the center speaker is exactly what its
-        # f0 value would predict (because the prediction itself is derived from this value)
-        # no flexibility in f0 here 
+        # no prediction error in null model
         learned_ff_prediction_error = 0
 
-        # this value controls how strongly the learned_ff_prediction_error is neutralized
-        # pred_err_scale = ei == 1 ? pred_err_scale_1a : pred_err_scale_1b
 
         # the formant value that would be expected given the stimulus f0
         stimulus_ff_from_f0_prediction = intercept + slope * f0s[i]
-        # this is combined with the scaled learned_ff_prediction_error because the subjectsusing 
-        # should have learned (at least in the blocked condition)
-        # to counter the prediction error between
+        # this is combined with the null learned_ff_prediction_error to simulate no learning
         # stimulus_ff_from_f0_prediction and stimulus_ff
         context_biased_ff_prediction = stimulus_ff_from_f0_prediction + learned_ff_prediction_error
 
-        # the full prior's mean is stimulus_ff_from_f0_prediction biased by the
-        # learned_ff_prediction_error, the uncertainty of that estimatio is given by
+        # the uncertainty of that estimatio is given by
         # prior_variance
         # local prior
         prior = Normal(context_biased_ff_prediction, sqrt(prior_variance))
@@ -260,12 +238,13 @@ end
         # with the variance of the combined distribution
         p_o = cdf(combined, exp(log_morphscale) * morphs[i] + stimulus_ff)
 
-        # why stimulus_ff and not predicted stimulus_ff? -> cdf verschoben ist schon template prediction
         n_os[i] ~ Binomial(ns[i], p_o)
     end
 end
 
+# full model
 param_mod = pred_error_binomial(n_o_df.f0_bark, n_o_df.ff_bark, n_o_df.context_ff, n_o_df.context_f0,n_o_df.morph_scaled, n_o_df.n_o, n_o_df.n, n_o_df.exp_index,hb_variance )
+# null model
 param_mod_null = pred_error_binomial_null(n_o_df.f0_bark, n_o_df.ff_bark, n_o_df.context_ff, n_o_df.context_f0,n_o_df.morph_scaled, n_o_df.n_o, n_o_df.n, n_o_df.exp_index,hb_variance )
 
 
@@ -287,23 +266,15 @@ end
 # model evidence - calculate loglikelihood 
 ℓ = Turing.pointwise_loglikelihoods(param_mod, chains)
 ℓ_mat = reduce(hcat, values(ℓ));
-ℓ_arr = reshape(ℓ_mat, 1, size(ℓ_mat)...); # (chain_idx, sample_idx, parameter_idx)
-# println(size(ℓ_arr))
+ℓ_arr = reshape(ℓ_mat, 1, size(ℓ_mat)...); 
+
 
 data = ArviZ.from_mcmcchains(
     chains,
     library = "Turing",
     log_likelihood = Dict("y" => ℓ_arr)
 )
-
 loo_result = ArviZ.arviz.loo(data)
-
-# x = summarize(chains; sections=[:parameters, :internals])
-# println(chain[:lp])
-# open("reports/bayesian_model_summarize_blocked.csv", "w") do file
-#     show(file, MIME"text/csv"(), x)
-# end
-
 
 
 open("reports/bayesian_model_output.txt", "w") do file
@@ -331,7 +302,7 @@ end
 
 ℓ = Turing.pointwise_loglikelihoods(param_mod_null, chains_mod_null)
 ℓ_mat = reduce(hcat, values(ℓ));
-ℓ_arr = reshape(ℓ_mat, 1, size(ℓ_mat)...); # (chain_idx, sample_idx, parameter_idx)
+ℓ_arr = reshape(ℓ_mat, 1, size(ℓ_mat)...);
 
 data_null = ArviZ.from_mcmcchains(
     chains_mod_null,
@@ -340,12 +311,6 @@ data_null = ArviZ.from_mcmcchains(
 )
 
 loo_result_null = ArviZ.arviz.loo(data_null)
-
-# x = summarize(chains; sections=[:parameters, :internals])
-# # println(chain[:lp])
-# open("reports/bayesian_model_3_summarize_blocked.csv", "w") do file
-#     show(file, MIME"text/csv"(), x)
-# end
 
 open("reports/bayesian_model_null_output.txt", "w") do file
     show(file, MIME"text/plain"(), chains_mod_null)
@@ -368,69 +333,11 @@ open("reports/bayesian_model_comparison_latex.txt", "w") do file
     show(file, MIME"text/plain"(), latexed_table(results))
 end
 
-# describe(chains, showall=true) # Lists statistics of the samples.
-# plot(chains, colordim = :parameters)
-
-
-### prior and posterior predictive check
-prior = Turing.sample(param_mod, Prior(), 8000);
-
-# vector of missing number of o-responses to predict
-n_os_missing = Vector{Missing}(missing, nrow(n_o_df)) 
-
-# feed into model
-model_missing = pred_error_binomial(
-    n_o_df.f0_bark, # f0s 
-    n_o_df.ff_bark, # ffs
-    n_o_df.context_ff, # context ff
-    n_o_df.context_f0, # context f0
-    n_o_df.morph_scaled, # :morph_scaled = :morph * 2 - 1
-    n_os_missing,
-    n_o_df.n, # ns
-    n_o_df.exp_index,
-    hb_variance, # prior_variance
-    )
-
-prior_predictive = Turing.predict(model_missing, prior)
-posterior_predictive = Turing.predict(model_missing, chains)
-
-open("reports/prior_predictive_raw.txt", "w") do file
-    show(file, MIME"text/plain"(), prior_predictive)
-end
-
-open("reports/posterior_predictive_raw.txt", "w") do file
-    show(file, MIME"text/plain"(), posterior_predictive)
-end
-
-# plot prior and posterior predictive check
-# @chain begin
-#     StatsPlots.plot(prior_predictive; colordim = :parameter)
-#     save("figures/prior_pred_para.png", _)
-# end
-
-# @chain begin
-#     StatsPlots.plot(posterior_predictive; colordim = :parameter)
-#     save("figures/post_pred_para.png", _)
-# end
-
-# @chain begin
-#     StatsPlots.plot(prior_predictive; colordim = :chain)
-#     save("figures/prior_pred_chain.png", _)
-# end
-
-# @chain begin
-#     StatsPlots.plot(posterior_predictive; colordim = :chain)
-#     save("figures/post_pred_chain.png", _)
-# end
-
-# @show summarystats(prior_predictive[:, 1:5, :])
-# @show summarystats(posterior_predictive[:, 1:5, :])
 
 
 function pred_error_binomial_prediction(f0s, ffs, context_ffs, context_f0s, morphs,
     experiment_indices, prior_variance, σ²_ff, pred_err_scale_1a,
     pred_err_scale_1b, log_morphscale)
-    # pred_err_scale_1a
 
     intercept = hb_intercept
     slope = hb_slope
@@ -468,8 +375,6 @@ end
 
 function pred_error_binomial_prediction_null(f0s, ffs, context_ffs, context_f0s, morphs,
     experiment_indices, prior_variance, σ²_ff,  log_morphscale)
-    # pred_err_scale_1a,
-    # pred_err_scale_1b,
 
     intercept = hb_intercept
     slope = hb_slope
@@ -482,8 +387,6 @@ function pred_error_binomial_prediction_null(f0s, ffs, context_ffs, context_f0s,
 
         # actually for 1a this is always 0 currently, so there's no use for pred_err_scale_1a
         learned_ff_prediction_error = 0
-
-        # pred_err_scale = ei == 1 ? pred_err_scale_1a : pred_err_scale_1b
 
         stimulus_ff_from_f0_prediction = intercept + slope * f0s[i]
         context_biased_ff_prediction = stimulus_ff_from_f0_prediction + learned_ff_prediction_error
@@ -526,8 +429,6 @@ predictions_null = pred_error_binomial_prediction_null(
     n_o_df.exp_index,
     hb_variance,
     mean(chains_mod_null["σ²_ff"]),
-    # mean(chains_mod_null["pred_err_scale_1a"]),
-    # mean(chains_mod_null["pred_err_scale_1b"]),
     mean(chains_mod_null["log_morphscale"]),
 )
 
